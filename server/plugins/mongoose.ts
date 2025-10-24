@@ -1,6 +1,21 @@
 import mongoose from "mongoose";
 
+// Safer defaults for serverless
+mongoose.set("strictQuery", true);
+mongoose.set("bufferCommands", false);
+
 export default defineNitroPlugin(async () => {
+  // Reuse existing connection promise across cold/warm starts
+  const g = globalThis as any;
+  if (g._mongooseConn) {
+    try {
+      await g._mongooseConn;
+      return;
+    } catch {
+      /* fallthrough to reconnect */
+    }
+  }
+
   if (mongoose.connection.readyState === 1) return;
 
   const { MONGODB_URI, MONGODB_DB } = useRuntimeConfig();
@@ -11,13 +26,20 @@ export default defineNitroPlugin(async () => {
 
   const uri = MONGODB_DB ? `${MONGODB_URI}/${MONGODB_DB}` : MONGODB_URI;
 
-  (globalThis as any)._mongooseConn = mongoose.connect(uri).catch((err) => {
+  const options = {
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    retryWrites: true,
+  } as const;
+
+  g._mongooseConn = mongoose.connect(uri, options).catch((err: any) => {
     console.error("❌ MongoDB connection error:", err.message);
-    delete (globalThis as any)._mongooseConn;
+    delete g._mongooseConn;
   });
 
   try {
-    await (globalThis as any)._mongooseConn;
+    await g._mongooseConn;
     console.log("✅ MongoDB connected to", MONGODB_DB || "(default)");
   } catch {
     console.error("⚠️ MongoDB connection failed");
