@@ -2,6 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: false },
+  future: { compatibilityVersion: 4 },
   ssr: true,
   pages: false,
   components: false,
@@ -12,10 +13,13 @@ export default defineNuxtConfig({
       "/api/**": {
         cors: true,
         headers: {
-          "access-control-allow-headers": "Authorization, Content-Type, X-Requested-With",
+          "access-control-allow-headers":
+            "Authorization, Content-Type, X-Requested-With",
         },
       },
+      "/**": { prerender: false },
     },
+    prerender: { routes: [] },
   },
   runtimeConfig: {
     // @ts-ignore
