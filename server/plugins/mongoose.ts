@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 // Safer defaults for serverless
 mongoose.set("strictQuery", true);
+mongoose.set("bufferTimeoutMS", 30000);
 
 export default defineNitroPlugin(async () => {
   // Reuse existing connection promise across cold/warm starts
@@ -23,13 +24,16 @@ export default defineNitroPlugin(async () => {
     return;
   }
 
-  const uri = MONGODB_DB ? `${MONGODB_URI}/${MONGODB_DB}` : MONGODB_URI;
+  // Use dbName option instead of concatenating to URI (safer for SRV/Atlas URIs)
+  const uri = MONGODB_URI;
 
   const options = {
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
+    serverSelectionTimeoutMS: 20000,
+    connectTimeoutMS: 15000,
+    socketTimeoutMS: 120000,
     retryWrites: true,
+    dbName: MONGODB_DB || undefined,
   } as const;
 
   g._mongooseConn = mongoose.connect(uri, options).catch((err: any) => {
