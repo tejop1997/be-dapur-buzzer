@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 // Safer defaults for serverless
 mongoose.set("strictQuery", true);
-mongoose.set("bufferCommands", false);
 
 export default defineNitroPlugin(async () => {
   // Reuse existing connection promise across cold/warm starts
